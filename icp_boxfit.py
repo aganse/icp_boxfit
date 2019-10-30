@@ -1,3 +1,5 @@
+import argparse
+import math
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -15,6 +17,38 @@ def Rmtx(axis, theta):
     return np.array([[a*a+b*b-c*c-d*d, 2*(b*c-a*d), 2*(b*d+a*c)],
                   [2*(b*c+a*d), a*a+c*c-b*b-d*d, 2*(c*d-a*b)],
                   [2*(b*d-a*c), 2*(c*d+a*b), a*a+d*d-b*b-c*c]])
+
+
+# Checks if a matrix is a valid rotation matrix.
+def isRotationMatrix(R) :
+    Rt = np.transpose(R)
+    shouldBeIdentity = np.dot(Rt, R)
+    I = np.identity(3, dtype = R.dtype)
+    n = np.linalg.norm(I - shouldBeIdentity)
+    return n < 1e-6
+ 
+ 
+# Calculates rotation matrix to euler angles
+# The result is the same as MATLAB except the order
+# of the euler angles ( x and z are swapped ).
+def rotationMatrixToEulerAngles(R) :
+ 
+    assert(isRotationMatrix(R))
+     
+    sy = math.sqrt(R[0,0] * R[0,0] +  R[1,0] * R[1,0])
+     
+    singular = sy < 1e-6
+ 
+    if  not singular :
+        x = math.atan2(R[2,1] , R[2,2])
+        y = math.atan2(-R[2,0], sy)
+        z = math.atan2(R[1,0], R[0,0])
+    else :
+        x = math.atan2(-R[1,2], R[1,1])
+        y = math.atan2(-R[2,0], sy)
+        z = 0
+ 
+    return np.array([x, y, z])
 
 
 def plot_ptcloud(ptcloud, color='k', ax=None):
@@ -38,26 +72,24 @@ def generate_ptcloud_on_box(x1, x2, y1, y2, z1, z2, N):
     return ptcloud
 
 
-def generate_synth_data(x=0, y=0, z=0, w=2, h=2, d=2, yaw=0, pitch=0, roll=0):
-    # Still working on this - translation and rotation will get replaced by
-    # x,y,z and yaw,pitch,roll.  Present algo doesn't handle scaling (w,h,d)
+def generate_synth_data(x=2, y=0, z=0, w=2, h=2, d=2, yaw=10, pitch=45, roll=0, noise_sigma=0.01, N=150):
+    # Presently doesn't handle scaling (w,h,d)
     # but there are other ICP algos that do which we can implement soon.
 
-    # Generate an "input" ptcloud to which we'll want to fit a box
+    # Generate an "input" ptcloud to which we'll want to fit a box.
     # convert from center position + extents to box bounds
-    translation=0.5; rotation=0.7; noise_sigma=0.01; N=150
     x1, x2, y1, y2, z1, z2 = xyzwhd_coords_to_x1y1(x,y,z, w,h,d)
     A = generate_ptcloud_on_box(x1, x2, y1, y2, z1, z2, N)
-    # Translate
-    t = np.random.rand(3)*translation
-    A += t
     # Rotate
-    R = Rmtx(np.random.rand(3), np.random.rand() * rotation)
-    A = np.dot(R, A.T).T
+    Rz = Rmtx([0,0,1], yaw*np.pi/180.0)
+    Ry = Rmtx([0,1,0], pitch*np.pi/180.0)
+    Rx = Rmtx([1,0,0], roll*np.pi/180.0)
+    A = np.dot(Rx, A.T).T
+    A = np.dot(Ry, A.T).T
+    A = np.dot(Rz, A.T).T
     # Add noise
     A += np.random.randn(N*6, 3) * noise_sigma
-    # Shuffle to disrupt correspondence
-    np.random.shuffle(A)
+    # np.random.shuffle(A)
     return A
 
 
@@ -71,47 +103,79 @@ def xyzwhd_coords_to_x1y1(x,y,z, w,h,d):
     return x1, x2, y1, y2, z1, z2
 
 
-def demonstrate():
+def demonstrate(x=5, y=0, z=0, w=2, h=2, d=4, yaw=10, pitch=0, roll=0, sigma=0.01, N=150, runstats=False, plotbox=False, plotpts=False):
     """Outermost wrapper demonstrating use of these functions estimating box fit."""
 
-    A = generate_synth_data()
+    # for now we don't yet have actual ptcloud input, so generate some
+    A = generate_synth_data(x, y, z, w, h, d, yaw, pitch, roll, sigma, N)
 
     # Create a box-based ptcloud we'll rotate to fit the input ptcloud
-    # B = np.copy(A)  # special case - fit exact copy of data
+    # B = np.copy(A)  # special case for testing - fit exact copy of data
     N = int(A.shape[0]/6)
-    print('N=',N)
-    x1, x2, y1, y2, z1, z2 = xyzwhd_coords_to_x1y1(0,0,0, 2,2,2)
+    x0 = 0; y0=0; z0=0;  # initial estimates
+    x1, x2, y1, y2, z1, z2 = xyzwhd_coords_to_x1y1(x0, y0, z0, w, h, d)
     B = generate_ptcloud_on_box(x1, x2, y1, y2, z1, z2, N)
 
     # Rotate/translate ptcloud B to fit ptcloud A
     # T is xform mtx of rotations (cols 0:2) & translations (col 3) to make B closest to A
     T, distances, iterations = icp.icp(B, A, tolerance=0.000001)
+    angles = rotationMatrixToEulerAngles(T[:3, :3]) * 180/np.pi
 
-    # plot points
-    ax = plot_ptcloud(A, color='red')
+    # Print table
+    print('               %7s %7s %7s    %7s %7s %7s    %5s %5s %5s' %
+        ('x', 'y', 'z',  'yaw', 'pitch', 'roll',  'w', 'h', 'd') )
+    print('ground truth:  %7.2f %7.2f %7.2f    %7.2f %7.2f %7.2f    %5.2f %5.2f %5.2f' %
+        (x, y, z, yaw, pitch, roll, w, h, d) )
+    print('solution est:  %7.2f %7.2f %7.2f    %7.2f %7.2f %7.2f    %5.2f %5.2f %5.2f' %
+        ( T[0,3], T[1,3], T[2,3],  angles[0], angles[1], angles[2],  w, h, d) )
+    print(' ')
 
-    # Transform the box by the ptcloud xform solution
-    C = np.ones((8, 4))
-    C[:,0:3] = np.copy(np.array([[x1,y1,z1], [x1,y1,z2], [x1,y2,z2], [x1,y2,z1],
-                                 [x2,y1,z1], [x2,y1,z2], [x2,y2,z2], [x2,y2,z1]]))
-    boxpts = np.dot(T, C.T).T
+    if runstats:
+        print('Run stats:')
+        print('  num pts:', N)
+        print('  sigma:', sigma)
+        print(' ', iterations, 'iterations')
+        print('  distances mean/std:', distances.mean(), distances.std())
+        # # print('  T matrix:')
+        # # print(T)
 
-    # Or for testing make new ptcloud C estimate of ptcloud A by xforming B
-    # C = np.ones((N*6, 4))
-    # C[:,0:3] = np.copy(B)
-    # C = np.dot(T, C.T).T
-    # ax = plot_ptcloud(C, color='blue', ax=ax)
+    if plotbox:
+        # For testing create a new ptcloud C estimate of ptcloud A by xforming B, 
+        # and plot on top of A to verify the box estimate in boxpts
+        if plotpts:
+            C = np.ones((N*6, 4))
+            C[:,0:3] = np.copy(B)
+            C = np.dot(T, C.T).T
+            ax = plot_ptcloud(C, color='blue', ax=ax)
 
-    plot_box(boxpts, ax=ax, col='black')
-
-    plt.show()
+        # Plot original ptcloud
+        ax = plot_ptcloud(A, color='red')
+        # Plot the solution estimate box
+        # (first xform the box by the ptcloud transform solution estimate)
+        C = np.ones((8, 4))
+        C[:,0:3] = np.copy(np.array([[x1,y1,z1], [x1,y1,z2], [x1,y2,z2], [x1,y2,z1],
+                                     [x2,y1,z1], [x2,y1,z2], [x2,y2,z2], [x2,y2,z1]]))
+        boxpts = np.dot(T, C.T).T
+        plot_box(boxpts, ax=ax, col='black')
+        plt.show()
 
 
 def plot_box(boxpts, ax=None, col='black'):
     fullbox = np.concatenate((boxpts[:4,:],boxpts[0:1,:],boxpts[4:8,:],boxpts[4:5,:],
                               boxpts[5:6,:],boxpts[1:3,:],boxpts[6:8,:],boxpts[3:4,:]), axis=0)
     ax.plot(fullbox[:,0], fullbox[:,1], fullbox[:,2], c=col)
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('z')
 
 
 if __name__ == "__main__":
-    demonstrate()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--plotbox", help="plot soln box", action="store_true", default=False)
+    parser.add_argument("-P", "--plotpts", help="plot soln box & ptcloud", action="store_true", default=False)
+    parser.add_argument("-s", "--sigma", type=float, help="sigma of noise to add to ptcloud", default=0.01)
+    parser.add_argument("-N", "--numpts", type=int, help="number of points in ptcloud", default=150)
+    parser.add_argument("-r", "--runstats", help="number of points in ptcloud", action="store_true", default=False)
+    args = parser.parse_args()
+
+    demonstrate(x=0, y=10, z=0, w=3, h=4, d=5, yaw=10, pitch=0, roll=0, sigma=args.sigma, N=args.numpts, runstats=args.runstats, plotbox=args.plotbox, plotpts=args.plotpts)

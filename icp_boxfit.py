@@ -10,35 +10,11 @@ import time
 import icp
 
 
-def Rmtx(axis, theta):
-    axis = axis/np.sqrt(np.dot(axis, axis))
-    a = np.cos(theta/2.)
-    b, c, d = -axis*np.sin(theta/2.)
-    return np.array([[a*a+b*b-c*c-d*d, 2*(b*c-a*d), 2*(b*d+a*c)],
-                  [2*(b*c+a*d), a*a+c*c-b*b-d*d, 2*(c*d-a*b)],
-                  [2*(b*d-a*c), 2*(c*d+a*b), a*a+d*d-b*b-c*c]])
-
-
-# Checks if a matrix is a valid rotation matrix.
-def isRotationMatrix(R) :
-    Rt = np.transpose(R)
-    shouldBeIdentity = np.dot(Rt, R)
-    I = np.identity(3, dtype = R.dtype)
-    n = np.linalg.norm(I - shouldBeIdentity)
-    return n < 1e-6
- 
- 
 # Calculates rotation matrix to euler angles
-# The result is the same as MATLAB except the order
-# of the euler angles ( x and z are swapped ).
+# thanks to Satya Mallick, https://www.learnopencv.com/rotation-matrix-to-euler-angles
 def rotationMatrixToEulerAngles(R) :
- 
-    assert(isRotationMatrix(R))
-     
     sy = math.sqrt(R[0,0] * R[0,0] +  R[1,0] * R[1,0])
-     
     singular = sy < 1e-6
- 
     if  not singular :
         x = math.atan2(R[2,1] , R[2,2])
         y = math.atan2(-R[2,0], sy)
@@ -47,10 +23,18 @@ def rotationMatrixToEulerAngles(R) :
         x = math.atan2(-R[1,2], R[1,1])
         y = math.atan2(-R[2,0], sy)
         z = 0
+    return np.array([z, y, x])
+
+
+def Rmtx(axis, theta):
+    axis = axis/np.sqrt(np.dot(axis, axis))
+    a = np.cos(theta/2.)
+    b, c, d = -axis*np.sin(theta/2.)
+    return np.array([[a*a+b*b-c*c-d*d, 2*(b*c-a*d), 2*(b*d+a*c)],
+                  [2*(b*c+a*d), a*a+c*c-b*b-d*d, 2*(c*d-a*b)],
+                  [2*(b*d-a*c), 2*(c*d+a*b), a*a+d*d-b*b-c*c]])
+
  
-    return np.array([x, y, z])
-
-
 def plot_ptcloud(ptcloud, color='k', ax=None):
     if ax is None:
         fig = plt.figure()
@@ -74,7 +58,7 @@ def generate_ptcloud_on_box(x1, x2, y1, y2, z1, z2, N):
 
 def generate_synth_data(x=2, y=0, z=0, w=2, h=2, d=2, yaw=10, pitch=45, roll=0, noise_sigma=0.01, N=150):
     # Presently doesn't handle scaling (w,h,d)
-    # but there are other ICP algos that do which we can implement soon.
+    # but there are other ICP algos that do which we can implement if this works out.
 
     # Generate an "input" ptcloud to which we'll want to fit a box.
     # convert from center position + extents to box bounds
@@ -89,7 +73,7 @@ def generate_synth_data(x=2, y=0, z=0, w=2, h=2, d=2, yaw=10, pitch=45, roll=0, 
     A = np.dot(Rz, A.T).T
     # Add noise
     A += np.random.randn(N*6, 3) * noise_sigma
-    # np.random.shuffle(A)
+    np.random.shuffle(A)
     return A
 
 
@@ -112,7 +96,7 @@ def demonstrate(x=5, y=0, z=0, w=2, h=2, d=4, yaw=10, pitch=0, roll=0, sigma=0.0
     # Create a box-based ptcloud we'll rotate to fit the input ptcloud
     # B = np.copy(A)  # special case for testing - fit exact copy of data
     N = int(A.shape[0]/6)
-    x0 = 0; y0=0; z0=0;  # initial estimates
+    x0 = 0; y0 = 0; z0 = 0;  # initial estimates
     x1, x2, y1, y2, z1, z2 = xyzwhd_coords_to_x1y1(x0, y0, z0, w, h, d)
     B = generate_ptcloud_on_box(x1, x2, y1, y2, z1, z2, N)
 
@@ -121,7 +105,7 @@ def demonstrate(x=5, y=0, z=0, w=2, h=2, d=4, yaw=10, pitch=0, roll=0, sigma=0.0
     T, distances, iterations = icp.icp(B, A, tolerance=0.000001)
     angles = rotationMatrixToEulerAngles(T[:3, :3]) * 180/np.pi
 
-    # Print table
+    # Print results table
     print('               %7s %7s %7s    %7s %7s %7s    %5s %5s %5s' %
         ('x', 'y', 'z',  'yaw', 'pitch', 'roll',  'w', 'h', 'd') )
     print('ground truth:  %7.2f %7.2f %7.2f    %7.2f %7.2f %7.2f    %5.2f %5.2f %5.2f' %
@@ -150,6 +134,7 @@ def demonstrate(x=5, y=0, z=0, w=2, h=2, d=4, yaw=10, pitch=0, roll=0, sigma=0.0
 
         # Plot original ptcloud
         ax = plot_ptcloud(A, color='red')
+
         # Plot the solution estimate box
         # (first xform the box by the ptcloud transform solution estimate)
         C = np.ones((8, 4))
@@ -175,7 +160,9 @@ if __name__ == "__main__":
     parser.add_argument("-P", "--plotpts", help="plot soln box & ptcloud", action="store_true", default=False)
     parser.add_argument("-s", "--sigma", type=float, help="sigma of noise to add to ptcloud", default=0.01)
     parser.add_argument("-N", "--numpts", type=int, help="number of points in ptcloud", default=150)
+    parser.add_argument("-n", "--numreps", type=int, help="number of run repetitions", default=1)
     parser.add_argument("-r", "--runstats", help="number of points in ptcloud", action="store_true", default=False)
     args = parser.parse_args()
 
-    demonstrate(x=0, y=10, z=0, w=3, h=4, d=5, yaw=10, pitch=0, roll=0, sigma=args.sigma, N=args.numpts, runstats=args.runstats, plotbox=args.plotbox, plotpts=args.plotpts)
+    for i in range(args.numreps):
+        demonstrate(x=0, y=10, z=0, w=3, h=4, d=5, yaw=10, pitch=0, roll=0, sigma=args.sigma, N=args.numpts, runstats=args.runstats, plotbox=args.plotbox, plotpts=args.plotpts)

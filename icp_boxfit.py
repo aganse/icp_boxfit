@@ -96,14 +96,14 @@ def demonstrate(x=5, y=0, z=0, w=2, h=2, d=4, yaw=10, pitch=0, roll=0, sigma=0.0
     # Create a box-based ptcloud we'll rotate to fit the input ptcloud
     # B = np.copy(A)  # special case for testing - fit exact copy of data
     N = int(A.shape[0]/6)
-    x0 = 0; y0 = 0; z0 = 0;  # initial estimates
+    x0 = 0; y0 = 0; z0 = 0  # initial estimates
     x1, x2, y1, y2, z1, z2 = xyzwhd_coords_to_x1y1(x0, y0, z0, w, h, d)
     B = generate_ptcloud_on_box(x1, x2, y1, y2, z1, z2, N)
 
     # Rotate/translate ptcloud B to fit ptcloud A
     # T is xform mtx of rotations (cols 0:2) & translations (col 3) to make B closest to A
     T, distances, iterations = icp.icp(B, A, tolerance=0.000001)
-    angles = rotationMatrixToEulerAngles(T[:3, :3]) * 180/np.pi
+    angles = rotationMatrixToEulerAngles(T[:3, :3].T) * 180/np.pi
 
     # Print results table
     print('               %7s %7s %7s    %7s %7s %7s    %5s %5s %5s' %

@@ -1,7 +1,8 @@
 """A packaged tool to estimate single 3D bounding box for bounding-box shaped ptcloud,
-to explore using ICP method.  In typical use one imports this package and then calls
-the estimate_bbox() function from other code; demonstrate() is a standalone cmdline
-demo app to show how to implement as well as to test algo updates/variations."""
+to explore using ICP method, based on all open-source tools/content.
+In typical usage one imports this package and then calls the estimate_bbox() function
+from other code; demonstrate() is a standalone cmdline demo app to show how to
+implement as well as to test algo updates/variations."""
 
 import argparse
 

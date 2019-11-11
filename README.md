@@ -6,6 +6,14 @@ The icp.py file is from Clay Flannigan's open src https://github.com/ClayFlannig
 module, duplicated here to packagize and to allow me to explore tweaks to its algo.
 
 # usage
+implemented from other code:
+```
+import icp_boxfit
+# do something to obtain A, an Nx3 ndarray of xyz triplets for ptcloud
+x_est, y_est, z_est, yaw_est, pitch_est, roll_est, w_est, h_est, l_est, _, _ = estimate_bbox(A)
+```
+
+calling demonstration from cmdline:
 ```
 > python icp_boxfit.py --help
 usage: icp_boxfit.py [-h] [-p] [-pp] [-s SIGMA] [-N NUMPTS] [-n NUMREPS] [-r]

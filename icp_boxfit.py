@@ -51,8 +51,8 @@ def plot_ptcloud(ptcloud, color='k', ax=None):
 
 
 def plot_box(boxpts, ax=None, col='black'):
-    """Plot the 3D box specified via 'boxpts' which is an 8x3 ndarray of 8 xyz triplets of box vertices.
-    """
+    """Plot the 3D box specified via 'boxpts' which is an 8x3 ndarray of 
+    8 xyz triplets of box vertices."""
     fullbox = np.concatenate((boxpts[:4,:],boxpts[0:1,:],boxpts[4:8,:],boxpts[4:5,:],
                               boxpts[5:6,:],boxpts[1:3,:],boxpts[6:8,:],boxpts[3:4,:]), axis=0)
     ax.plot(fullbox[:,0], fullbox[:,1], fullbox[:,2], c=col)
@@ -70,7 +70,7 @@ def set_axes_equal(ax):
     Input
       ax: a matplotlib axis, e.g., as output from plt.gca().
 
-    (got this function from:)
+    Adapted from snippet by Mateen Ulhaq:
     https://stackoverflow.com/questions/13685386/matplotlib-equal-unit-length-with-equal-aspect-ratio-z-axis-is-not-equal-to
     '''
 
@@ -104,8 +104,7 @@ def generate_ptcloud_on_box(x1, x2, y1, y2, z1, z2, N):
 
 
 def generate_synth_data(x=2, y=0, z=0, w=2, h=2, l=2, yaw=10, pitch=0, roll=0, noise_sigma=0.01, N=150):
-    # Presently doesn't handle scaling (w,h,l)
-    # but there are other ICP algos that do which we can implement if this works out.
+    """Generate point cloud randomly distributed along sides of specified bounding box."""
 
     # Generate an "input" ptcloud to which we'll want to fit a box.
     # convert from center position + extents to box bounds
@@ -125,6 +124,7 @@ def generate_synth_data(x=2, y=0, z=0, w=2, h=2, l=2, yaw=10, pitch=0, roll=0, n
 
 
 def xyzwhl_to_xyz1xyz2(x,y,z, w,h,l):
+    """Convert from box center-extents spec to diaonally-opposite-corner spec for box."""
     x1 = x - w/2.0
     x2 = x + w/2.0
     y1 = y - l/2.0

@@ -1,0 +1,33 @@
+from setuptools import setup
+
+setup(
+    name='icp_boxfit',
+    version='0.1',
+    description='ICP-based 3D box fit to point cloud data',
+    author='Andy Ganse',
+    author_email='andy@ganse.org',
+    install_requires=[
+        'astroid',
+        'cycler',
+        'isort',
+        'joblib',
+        'kiwisolver',
+        'lazy-object-proxy',
+        'matplotlib',
+        'mccabe',
+        'numpy',
+        'pandas',
+        'pip',
+        'pylint',
+        'pyparsing',
+        'python-dateutil',
+        'pytz',
+        'scikit-learn',
+        'scipy',
+        'setuptools',
+        'six',
+        'sklearn',
+        'typed-ast',
+        'wrapt',
+    ],
+)

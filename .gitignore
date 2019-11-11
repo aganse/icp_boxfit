@@ -102,3 +102,9 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Vim temp files
+*.swp
+
+# Visual Studio Code settings
+.vscode/

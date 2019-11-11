@@ -2,6 +2,8 @@
 Estimate a single 3D bounding box for bounding-box shaped ptcloud, with options to play
 with the estimation and plot points.  Goal is to explore the stability of ICP and
 different formulation variations for this purpose, using all open-source components.
+The icp.py file is from Clay Flannigan's open src https://github.com/ClayFlannigan/icp
+module, duplicated here to packagize and to allow me to explore tweaks to its algo.
 
 # usage
 ```

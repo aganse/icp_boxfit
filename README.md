@@ -42,6 +42,6 @@ cd icp_boxfit  # (this repo's dir)
 python3 -m venv .venv
 source .venv/bin/activate
 pip install .
-python icp_boxfit --help
+python icp_boxfit.py --help
 ```
 

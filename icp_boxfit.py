@@ -136,7 +136,7 @@ def xyzwhl_to_xyz1xyz2(x,y,z, w,h,l):
     return x1, x2, y1, y2, z1, z2
 
 
-def estimate_bbox(A, x0=0, y0=0, z0=0, w0=2, h0=2, l0=5, tol=0.000001, solnbox=False, solnpts=False):
+def estimate_bbox(A, x0=0, y0=0, z0=0, w0=2, h0=2, l0=5, tol=1e-4, solnbox=False, solnpts=False):
     """Estimate best-fitting 3D box to given point cloud.
     params:
         A: Nx3 numpy array of point cloud in x,y,z
@@ -162,7 +162,7 @@ def estimate_bbox(A, x0=0, y0=0, z0=0, w0=2, h0=2, l0=5, tol=0.000001, solnbox=F
 
     # Rotate/translate ptcloud B to fit ptcloud A
     # T is xform mtx of rotations (cols 0:2) & translations (col 3) to make B closest to A
-    T, distances, iterations = icp.icp(B, A, tolerance=tol)
+    T, distances, iterations, bulk_error = icp.icp(B, A, tolerance=tol, max_iterations=50)
     angles = rotationMatrixToEulerAngles(T[:3, :3].T) * 180/np.pi
 
     x_est, y_est, z_est = ( T[0,3], T[1,3], T[2,3] )
@@ -188,11 +188,14 @@ def estimate_bbox(A, x0=0, y0=0, z0=0, w0=2, h0=2, l0=5, tol=0.000001, solnbox=F
     else:
         ptcloud = None
 
-    return x_est, y_est, z_est, yaw_est, pitch_est, roll_est, w_est, h_est, l_est, boxpts, ptcloud
+    return x_est, y_est, z_est, yaw_est, pitch_est, roll_est, w_est, h_est, l_est, boxpts, ptcloud, \
+        iterations, distances, bulk_error
 
 
-def demonstrate(x=5, y=0, z=0, w=2, h=2, l=5, yaw=10, pitch=0, roll=0, infile=None,
-                outfile=None, sigma=0.01, N=150, runstats=False, plotbox=False, plotpts=False):
+def demonstrate(x=5, y=0, z=0, w=2, h=2, l=5, yaw=10, pitch=0, roll=0, 
+                cutx=None, cuty=None, cutz=None,
+                infile=None, outfile=None, sigma=0.01, N=150, runstats=False, 
+                plotbox=False, plotpts=False):
     """A top-level wrapper demonstrating use of these functions estimating box fit."""
 
     if infile is not None and outfile is None:
@@ -201,6 +204,12 @@ def demonstrate(x=5, y=0, z=0, w=2, h=2, l=5, yaw=10, pitch=0, roll=0, infile=No
     elif infile is None:
         # for now we don't yet have actual ptcloud input, so generate some
         A = generate_synth_data(x, y, z, w, h, l, yaw, pitch, roll, sigma, N)
+        if cutx is not None:
+            A = A[A[:,0]>cutx, :]
+        if cuty is not None:
+            A = A[A[:,1]>cuty, :]
+        if cutz is not None:
+            A = A[A[:,2]>cutz, :]
         if outfile is not None:
             # output synthetic points to csv file
             np.savetxt(outfile, A, delimiter=",")
@@ -209,8 +218,8 @@ def demonstrate(x=5, y=0, z=0, w=2, h=2, l=5, yaw=10, pitch=0, roll=0, infile=No
             "only one of infile and outfile may be specified in a run, not both"
 
     # Estimate the best-fitting bounding box to the ptcloud
-    x_est, y_est, z_est, yaw_est, pitch_est, roll_est, w_est, h_est, l_est, B, C = \
-        estimate_bbox(A, solnbox=plotbox, solnpts=plotpts)
+    x_est, y_est, z_est, yaw_est, pitch_est, roll_est, w_est, h_est, l_est, B, C, \
+        iterations, distances, bulk_error = estimate_bbox(A, solnbox=plotbox, solnpts=plotpts)
 
     # Print results table
     print('               %7s %7s %7s    %7s %7s %7s    %5s %5s %5s' %
@@ -261,10 +270,15 @@ if __name__ == "__main__":
     parser.add_argument("-W", "--w", type=float, help="synth generated box width", default=2.0)
     parser.add_argument("-H", "--h", type=float, help="synth generated box height", default=2.0)  # note -h is --help so using cap H
     parser.add_argument("-L", "--l", type=float, help="synth generated box length", default=5.0)
+    parser.add_argument("-cx", "--cutx", type=float, help="remove synth generate pts with x>cutx", default=None)
+    parser.add_argument("-cy", "--cuty", type=float, help="remove synth generate pts with y>cuty", default=None)
+    parser.add_argument("-cz", "--cutz", type=float, help="remove synth generate pts with z>cutz", default=None)
     args = parser.parse_args()
 
     for i in range(args.numreps):
         demonstrate(x=args.x, y=args.y, z=args.z, w=args.w, h=args.h, l=args.l, \
-                    yaw=args.yaw, pitch=args.pitch, roll=args.roll, infile=args.infile, \
-                    outfile=args.outfile, sigma=args.sigma, N=args.numpts, runstats=args.runstats, \
+                    yaw=args.yaw, pitch=args.pitch, roll=args.roll, \
+                    cutx=args.cutx, cuty=args.cuty, cutz=args.cutz, \
+                    infile=args.infile, outfile=args.outfile, \
+                    sigma=args.sigma, N=args.numpts, runstats=args.runstats, \
                     plotbox=args.plotbox, plotpts=args.plotpts)

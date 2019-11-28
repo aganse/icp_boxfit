@@ -108,12 +108,13 @@ def icp(A, B, init_pose=None, max_iterations=20, tolerance=0.001):
         src = np.dot(T, src)
 
         # check error
-        mean_error = np.mean(distances)
-        if np.abs(prev_error - mean_error) < tolerance:
+        bulk_error = np.mean(distances)
+        # print(bulk_error)
+        if np.abs(prev_error - bulk_error) < tolerance:
             break
-        prev_error = mean_error
+        prev_error = bulk_error
 
     # calculate final transformation
     T,_,_ = best_fit_transform(A, src[:m,:].T)
 
-    return T, distances, i
+    return T, distances, i, bulk_error

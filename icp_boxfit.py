@@ -314,4 +314,5 @@ if __name__ == "__main__":
               np.std(w_est), np.std(h_est), np.std(l_est)
              )
          )
+    print('')
 

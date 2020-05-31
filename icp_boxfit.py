@@ -195,7 +195,7 @@ def estimate_bbox(A, x0=0, y0=0, z0=0, w0=2, h0=2, l0=5, tol=1e-4, solnbox=False
 def demonstrate(x=5, y=0, z=0, w=2, h=2, l=5, yaw=10, pitch=0, roll=0, 
                 cutx=None, cuty=None, cutz=None,
                 infile=None, outfile=None, sigma=0.01, N=150, runstats=False, 
-                plotbox=False, plotpts=False):
+                plotbox=False, plotpts=False, firstline=True, allsolns=True):
     """A top-level wrapper demonstrating use of these functions estimating box fit."""
 
     if infile is not None and outfile is None:
@@ -222,13 +222,14 @@ def demonstrate(x=5, y=0, z=0, w=2, h=2, l=5, yaw=10, pitch=0, roll=0,
         iterations, distances, bulk_error = estimate_bbox(A, solnbox=plotbox, solnpts=plotpts)
 
     # Print results table
-    print('               %7s %7s %7s    %7s %7s %7s    %5s %5s %5s' %
-        ('x', 'y', 'z',  'yaw', 'pitch', 'roll',  'w', 'h', 'l') )
-    print('ground truth:  %7.2f %7.2f %7.2f    %7.2f %7.2f %7.2f    %5.2f %5.2f %5.2f' %
-        (x, y, z, yaw, pitch, roll, w, h, l) )
-    print('solution est:  %7.2f %7.2f %7.2f    %7.2f %7.2f %7.2f    %5.2f %5.2f %5.2f' %
-        (x_est, y_est, z_est, yaw_est, pitch_est, roll_est, w_est, h_est, l_est) )
-    print(' ')
+    if firstline:
+        print('               %7s %7s %7s    %7s %7s %7s    %5s %5s %5s' %
+            ('x', 'y', 'z',  'yaw', 'pitch', 'roll',  'w', 'h', 'l') )
+        print('ground truth:  %7.2f %7.2f %7.2f    %7.2f %7.2f %7.2f    %5.2f %5.2f %5.2f' %
+            (x, y, z, yaw, pitch, roll, w, h, l) )
+    if allsolns:
+        print('solution est:  %7.2f %7.2f %7.2f    %7.2f %7.2f %7.2f    %5.2f %5.2f %5.2f' %
+            (x_est, y_est, z_est, yaw_est, pitch_est, roll_est, w_est, h_est, l_est) )
 
     if runstats:
         print('Run stats:')
@@ -249,6 +250,8 @@ def demonstrate(x=5, y=0, z=0, w=2, h=2, l=5, yaw=10, pitch=0, roll=0,
         plot_box(B, ax=ax, col='black')
         set_axes_equal(ax) 
         plt.show()
+
+    return x_est, y_est, z_est, yaw_est, pitch_est, roll_est, w_est, h_est, l_est
 
 
 if __name__ == "__main__":
@@ -273,12 +276,42 @@ if __name__ == "__main__":
     parser.add_argument("-cx", "--cutx", type=float, help="remove synth generate pts with x>cutx", default=None)
     parser.add_argument("-cy", "--cuty", type=float, help="remove synth generate pts with y>cuty", default=None)
     parser.add_argument("-cz", "--cutz", type=float, help="remove synth generate pts with z>cutz", default=None)
+    parser.add_argument("-a", "--allsolns", help="list every solution", action="store_true", default=False)
     args = parser.parse_args()
 
+    x_est = np.zeros(args.numreps)
+    y_est = np.zeros(args.numreps)
+    z_est = np.zeros(args.numreps)
+    yaw_est = np.zeros(args.numreps)
+    pitch_est = np.zeros(args.numreps)
+    roll_est = np.zeros(args.numreps)
+    w_est = np.zeros(args.numreps)
+    h_est = np.zeros(args.numreps)
+    l_est = np.zeros(args.numreps)
     for i in range(args.numreps):
-        demonstrate(x=args.x, y=args.y, z=args.z, w=args.w, h=args.h, l=args.l, \
-                    yaw=args.yaw, pitch=args.pitch, roll=args.roll, \
-                    cutx=args.cutx, cuty=args.cuty, cutz=args.cutz, \
-                    infile=args.infile, outfile=args.outfile, \
-                    sigma=args.sigma, N=args.numpts, runstats=args.runstats, \
-                    plotbox=args.plotbox, plotpts=args.plotpts)
+        if i==0:
+            firstline = True
+        else:
+            firstline = False
+        x_est[i], y_est[i], z_est[i], yaw_est[i], pitch_est[i], roll_est[i], w_est[i], h_est[i], l_est[i] = \
+            demonstrate(x=args.x, y=args.y, z=args.z, w=args.w, h=args.h, l=args.l, \
+                        yaw=args.yaw, pitch=args.pitch, roll=args.roll, \
+                        cutx=args.cutx, cuty=args.cuty, cutz=args.cutz, \
+                        infile=args.infile, outfile=args.outfile, \
+                        sigma=args.sigma, N=args.numpts, runstats=args.runstats, \
+                        plotbox=args.plotbox, plotpts=args.plotpts, \
+                        firstline=firstline, allsolns=args.allsolns)
+
+    print('soln mean   :  %7.2f %7.2f %7.2f    %7.2f %7.2f %7.2f    %5.2f %5.2f %5.2f' %
+             (np.mean(x_est), np.mean(y_est), np.mean(z_est), 
+              np.mean(yaw_est), np.mean(pitch_est), np.mean(roll_est), 
+              np.mean(w_est), np.mean(h_est), np.mean(l_est)
+             )
+         )
+    print('soln stdev  :  %7.2f %7.2f %7.2f    %7.2f %7.2f %7.2f    %5.2f %5.2f %5.2f' %
+             (np.std(x_est), np.std(y_est), np.std(z_est), 
+              np.std(yaw_est), np.std(pitch_est), np.std(roll_est), 
+              np.std(w_est), np.std(h_est), np.std(l_est)
+             )
+         )
+

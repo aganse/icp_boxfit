@@ -50,6 +50,10 @@ optional arguments:
   -W W, --w W             synth generated box width
   -H H, --h H             synth generated box height
   -L L, --l L             synth generated box length
+  -cx CUTX, --cutx CUTX   remove synth generated pts with x > cutx
+  -cy CUTY, --cuty CUTY   remove synth generated pts with y > cuty
+  -cz CUTZ, --cutz CUTZ   remove synth generated pts with z > cutz
+  -a, --allsolns          list every solution for -n (default is just mean/stdv at end)
 ```
 
 ## installation

@@ -5,8 +5,12 @@ different formulation variations for this purpose, using all open-source compone
 The icp.py file is from Clay Flannigan's open src https://github.com/ClayFlannigan/icp
 module, duplicated here to packagize and to allow me to explore tweaks to its algo.
 
-# usage
+![](box1.png) ![](box2.png) ![](output.png)
+
+
+## usage
 implemented from other code:
+
 ```
 import icp_boxfit
 # do something to obtain A, an Nx3 ndarray of xyz triplets for ptcloud
@@ -14,6 +18,7 @@ x_est, y_est, z_est, yaw_est, pitch_est, roll_est, w_est, h_est, l_est, _, _ = e
 ```
 
 calling demonstration from cmdline:
+
 ```
 > python icp_boxfit.py --help
 usage: icp_boxfit.py [-h] [-p] [-pp] [-s SIGMA] [-N NUMPTS] [-n NUMREPS] [-r]
@@ -47,7 +52,7 @@ optional arguments:
   -L L, --l L             synth generated box length
 ```
 
-# installation
+## installation
 ```
 cd icp_boxfit  # (this repo's dir)
 python3 -m venv .venv

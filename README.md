@@ -65,3 +65,12 @@ pip install .
 python icp_boxfit.py --help
 ```
 
+## new:
+Added a separate test module trying and demonstrating the icp() usage on a 2D problem.
+Totally independent of all the 3D stuff above.
+In ipython, or a notebook, or a python prompt, or in python code... :
+```
+import icp_test2d
+icp_test2d.test2d(eps=.2, angle=20, offset=[10, 5], tol=1e-7)
+# (arbitrarily chosen args in that call - this will output calculation results)
+```

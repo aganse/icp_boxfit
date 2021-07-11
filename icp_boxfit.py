@@ -32,7 +32,7 @@ def rotationMatrixToEulerAngles(R) :
 
 def Rmtx(axis, theta):
     """Generate single-axis rotation matrix given axis and angle.
-    Axis specified as [1,0,0] or [0,1,0] or [0,0,1].  Theta in degrees.
+    Axis specified as [1,0,0] or [0,1,0] or [0,0,1].  Theta in radians.
     """
     axis = axis/np.sqrt(np.dot(axis, axis))
     a = np.cos(theta/2.)
